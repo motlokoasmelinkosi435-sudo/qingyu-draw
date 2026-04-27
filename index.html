@@ -935,6 +935,11 @@
       // 🔴 🔴 🔴 已配置为您的公开域名 🔴 🔴 🔴
       const PUBLIC_R2_DOMAIN = 'https://cdn.gordensun.com/bananaproimage';
 
+      // API 端点 (nano-banana 系列 与 gpt-image-2 使用不同接口)
+      const ENDPOINT = 'https://grsai.dakka.com.cn/v1/draw/nano-banana';
+      const GPT_IMAGE_ENDPOINT = 'https://grsai.dakka.com.cn/v1/draw/completions';
+      const RESULT_ENDPOINT = 'https://grsai.dakka.com.cn/v1/draw/result';
+
       // 独立缓存 Keys (grsai_pro)
       const STORE_KEY = 'grsai_pro:key';
       const STORE_RATIO = 'grsai_pro:ratio';
@@ -1008,21 +1013,20 @@
         const key = ui.key.value.trim();
         if (!key) return msg('请先填写 Key', true);
 
-        msg('正在查询剩余额度...');
+        msg('正在查询剩余次数...');
         try {
-          const res = await fetch('https://your85.cn/v1/dashboard/billing/subscription', {
-            method: 'GET',
-            headers: { 'Authorization': 'Bearer ' + key }
+          const res = await fetch('https://grsai.dakka.com.cn/client/openapi/getAPIKeyCredits', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ apiKey: key })
           });
           const data = await res.json();
-          if (res.ok && data) {
-            if (data.hard_limit_usd !== undefined) {
-              msg(`查询成功：总额度 $${data.hard_limit_usd}`);
-            } else {
-              msg('查询成功，具体额度请前往平台查看');
-            }
+          if (data.code === 0 && data.data && typeof data.data.credits === 'number') {
+            const credits = data.data.credits;
+            const remainingPoints = credits / 10;
+            msg(`剩余积分: ${remainingPoints}`);
           } else {
-            msg('查询失败: ' + (data.error?.message || '未知错误'), true);
+            msg('查询失败: ' + (data.msg || '未知错误'), true);
           }
         } catch (e) {
           msg('查询失败: ' + e.message, true);
@@ -1278,31 +1282,35 @@
           else if (ratio === '1:1') imgSize = '1024x1024';
           else imgSize = '1024x1024'; // fallback
 
-          let endpoint = 'https://your85.cn/v1/images/generations';
+          let endpoint = 'https://grsai.dakka.com.cn/v1/draw/completions';
           let options = {
             method: 'POST',
             headers: {
-              'Authorization': 'Bearer ' + key
+              'Authorization': 'Bearer ' + key,
+              'Content-Type': 'application/json'
             }
           };
 
+          const payload = {
+            model: model,
+            prompt: prompt,
+            aspectRatio: ui.ratio.value, // 1:1, 16:9, 3:2 etc.
+            stream: true // 根据文档提示，可能需要明确指定流式返回
+          };
+
+          // 如果有参考图，上传到图床获取URL，或者由于这里不支持直接传文件，我们转为base64？
+          // 根据文档，urls是图片URL数组。我们可能需要先把本地图片转为base64，或者直接略过？
+          // 如果用户选择了图片，我们可以用 FileReader 转为 base64 传过去 (部分API支持base64格式的URL)
           if (rawFiles.length > 0) {
-            endpoint = 'https://your85.cn/v1/images/edits';
-            const formData = new FormData();
-            formData.append('prompt', prompt);
-            formData.append('model', model);
-            formData.append('image', rawFiles[0]);
-            formData.append('size', imgSize);
-            options.body = formData;
-          } else {
-            endpoint = 'https://your85.cn/v1/images/generations';
-            options.headers['Content-Type'] = 'application/json';
-            options.body = JSON.stringify({
-              model: model,
-              prompt: prompt,
-              size: imgSize
+            const base64Url = await new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onload = (e) => resolve(e.target.result);
+              reader.readAsDataURL(rawFiles[0]);
             });
+            payload.urls = [base64Url];
           }
+
+          options.body = JSON.stringify(payload);
 
           const res = await fetch(endpoint, options);
           if (!res.ok) {
@@ -1310,23 +1318,73 @@
             try {
               const errData = await res.json();
               if (errData.error && errData.error.message) errMessage = errData.error.message;
+              else if (errData.message) errMessage = errData.message;
             } catch (e) { }
             
-            // 对特殊的高并发限流情况增加更友好的提示或截断
             if (errMessage.includes('experiencing high demand') || res.status === 429) {
                errMessage = `系统当前高负载（API请求过快或并发过高），请稍后重试。\n详细: ${errMessage}`;
             }
             throw new Error(errMessage);
           }
 
-          const data = await res.json();
           let urls = [];
-          if (data.data && data.data.length > 0) {
-            urls = data.data.map(item => {
-              if (item.url) return item.url;
-              if (item.b64_json) return `data:image/png;base64,${item.b64_json}`;
-              return null;
-            }).filter(u => u);
+          
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('text/event-stream') || contentType.includes('stream')) {
+            // 处理流式响应
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buffer = '';
+            
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split('\n');
+              buffer = lines.pop(); // 保留最后一个不完整的行
+              
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || !trimmed.startsWith('data:')) continue;
+                
+                const dataStr = trimmed.slice(5).trim();
+                if (dataStr === '[DONE]') continue;
+                
+                try {
+                  const dataObj = JSON.parse(dataStr);
+                  // 尝试解析进度和结果
+                  if (dataObj.status === 'IN_PROGRESS' && dataObj.progress) {
+                    msg(`正在绘制... 进度: ${dataObj.progress}`);
+                  }
+                  
+                  // 寻找图片URL
+                  const imgUrl = dataObj.imageUrl || dataObj.url || (dataObj.data && dataObj.data[0] && dataObj.data[0].url);
+                  if (imgUrl && dataObj.status === 'SUCCESS') {
+                    if (!urls.includes(imgUrl)) urls.push(imgUrl);
+                  }
+                } catch (e) {
+                  console.warn('解析流数据失败:', dataStr);
+                }
+              }
+            }
+          } else {
+            // 处理同步 JSON 响应
+            const data = await res.json();
+            
+            // 尝试从多种常见结构中提取图片
+            if (data.imageUrl) urls.push(data.imageUrl);
+            else if (data.url) urls.push(data.url);
+            else if (data.result && typeof data.result === 'string' && data.result.startsWith('http')) urls.push(data.result);
+            else if (data.data && Array.isArray(data.data)) {
+              urls = data.data.map(item => {
+                if (item.url) return item.url;
+                if (item.b64_json) return `data:image/png;base64,${item.b64_json}`;
+                return null;
+              }).filter(u => u);
+            } else if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
+               urls.push(data.choices[0].message.content); // markdown 图片链接或纯URL
+            }
           }
 
           if (urls.length > 0) {

@@ -1292,32 +1292,26 @@
           };
 
           if (model === 'nano-banana-pro') {
-            endpoint = 'https://grsai.dakka.com.cn/v1/chat/completions';
+            endpoint = 'https://grsai.dakka.com.cn/v1/draw/nano-banana';
             
-            // 对 nano-banana-pro 拼接比例要求
-            let enhancedPrompt = prompt;
-            if (ui.ratio.value !== '1:1') {
-              enhancedPrompt += ` (Aspect Ratio: ${ui.ratio.value})`;
-            }
-
+            // 对 nano-banana-pro 拼接参数
             payload = {
               model: model,
-              messages: [
-                { role: "user", content: enhancedPrompt }
-              ]
+              prompt: prompt,
+              aspectRatio: ui.ratio.value === '1:1' ? '1:1' : ui.ratio.value || 'auto', 
+              imageSize: ui.size.value || '1K',
+              webHook: "-1",
+              shutProgress: false
             };
 
-            // 如果有参考图，可以将图转换为 base64 放进 message 结构里，如果该模型支持视觉
+            // 如果有参考图，需要放入 urls 数组 (支持 Base64 或 URL)
             if (rawFiles.length > 0) {
               const base64Url = await new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = (e) => resolve(e.target.result);
                 reader.readAsDataURL(rawFiles[0]);
               });
-              payload.messages[0].content = [
-                { type: "text", text: enhancedPrompt },
-                { type: "image_url", image_url: { url: base64Url } }
-              ];
+              payload.urls = [base64Url];
             }
           } else {
             payload = {

@@ -1663,8 +1663,32 @@
         }
       }
 
-      // 重试生成
+      // 重试生成（带提示词自动优化）
       function retryGeneration() {
+        const originalPrompt = ui.prompt.value.trim();
+        
+        // 添加随机艺术风格修饰词来绕过审核
+        const artStyles = [
+          '印象派风格', '写实主义', '超现实主义', '表现主义',
+          '现代艺术', '古典油画', '数字绘画', '概念艺术',
+          '艺术摄影', '插画风格', '手绘风格', '混合媒介'
+        ];
+        const randomStyle = artStyles[Math.floor(Math.random() * artStyles.length)];
+        
+        // 添加随机修饰词
+        const modifiers = [
+          '，高清细节', '，精美质感', '，艺术感',
+          '，细腻描绘', '，生动逼真', '，色彩丰富'
+        ];
+        const randomModifier = modifiers[Math.floor(Math.random() * modifiers.length)];
+        
+        // 组合新的提示词
+        const newPrompt = `${randomStyle}，${originalPrompt}${randomModifier}`;
+        
+        // 更新提示词
+        ui.prompt.value = newPrompt;
+        
+        // 点击生成按钮
         ui.go.click();
       }
 

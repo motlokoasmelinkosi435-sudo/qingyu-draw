@@ -345,6 +345,26 @@
       color: var(--accent);
       min-height: 20px;
       margin-top: -6px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-retry {
+      background: rgba(212, 175, 55, 0.2);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .btn-retry:hover {
+      background: var(--accent);
+      color: #1a1a1a;
     }
 
     /* 增大 */
@@ -879,7 +899,10 @@
         </div>
       </div>
 
-      <div class="status-bar" id="status"></div>
+      <div class="status-bar" id="status">
+        <span id="statusText"></span>
+        <button class="btn-retry" id="retryBtn" style="display:none;" onclick="retryGeneration()">↻ 重试</button>
+      </div>
 
       <button class="btn-main" id="go">
         <span class="spinner" id="spin"></span>
@@ -969,6 +992,8 @@
         btnText: el('btnText'),
         spin: el('spin'),
         status: el('status'),
+        statusText: el('statusText'),
+        retryBtn: el('retryBtn'),
         gallery: el('gallery'),
         lb: el('lightbox'),
         lbMain: document.querySelector('.lb-main'),
@@ -1561,9 +1586,11 @@
                     clearInterval(pollTimer);
                     addHistoryItem(taskId, 'failed', [], prompt);
                     let errorMsg = targetData.failure_reason || targetData.error || targetData.failReason || targetData.msg || pollData.msg || '未知错误';
+                    let showRetry = false;
                     // 翻译常见错误信息
                     if (errorMsg.includes('output_moderation')) {
-                      errorMsg = '内容审核未通过，请修改提示词或尝试其他主题';
+                      errorMsg = '内容审核未通过，可点击重试或修改提示词';
+                      showRetry = true;
                     } else if (errorMsg.includes('input_moderation')) {
                       errorMsg = '输入内容审核未通过，请修改提示词';
                     } else if (errorMsg.includes('rate_limit')) {
@@ -1571,7 +1598,7 @@
                     } else if (errorMsg.includes('invalid_api_key')) {
                       errorMsg = 'API Key 无效，请检查您的 Key';
                     }
-                    msg(`绘制失败: ${errorMsg}`, true);
+                    msg(`绘制失败: ${errorMsg}`, true, showRetry);
                     setLoading(false);
                     return;
                   }
@@ -1636,9 +1663,16 @@
         }
       }
 
-      function msg(txt, err = false) {
-        ui.status.textContent = txt;
+      // 重试生成
+      function retryGeneration() {
+        ui.go.click();
+      }
+
+      function msg(txt, err = false, showRetry = false) {
+        ui.statusText.textContent = txt;
         ui.status.style.color = err ? '#ff6b6b' : 'var(--accent)';
+        // 显示或隐藏重试按钮
+        ui.retryBtn.style.display = showRetry ? 'inline-block' : 'none';
       }
 
       function addGalleryGroup(urls, prompt) {

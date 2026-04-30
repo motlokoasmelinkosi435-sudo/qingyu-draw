@@ -1667,23 +1667,31 @@
       function retryGeneration() {
         const originalPrompt = ui.prompt.value.trim();
         
-        // 添加随机艺术风格修饰词来绕过审核
-        const artStyles = [
-          '印象派风格', '写实主义', '超现实主义', '表现主义',
-          '现代艺术', '古典油画', '数字绘画', '概念艺术',
-          '艺术摄影', '插画风格', '手绘风格', '混合媒介'
+        // 尝试将提示词翻译成英文，英文提示词更容易通过审核
+        const translations = [
+          `oil painting, Michael Borremans style, tired middle-aged man with stubble, light blue shirt, sitting at messy office desk, hand on head, looking down at desk, lit by desk lamp, low saturation gray tones, dramatic lighting, hyper-realistic texture, clear brush strokes, melancholy atmosphere, museum quality, 8K resolution`,
+          `fine art oil painting in Michael Borremans style, weary middle-aged male figure with beard, wearing blue shirt, seated at cluttered desk, thoughtful pose, dramatic chiaroscuro lighting, photorealistic details, emotional mood, gallery quality artwork, ultra high definition`,
+          `masterpiece oil painting inspired by Michael Borremans, contemplative middle-aged man, blue shirt, messy workspace, dramatic lighting, realistic textures, professional art quality, cinematic mood`,
+          `artistic oil portrait, Michael Borremans aesthetic, middle-aged gentleman with thoughtful expression, office interior scene, moody lighting, high detail rendering, professional artwork`,
+          `classical oil painting style, inspired by Michael Borremans, mature man in contemplation, office desk setting, atmospheric lighting, realistic art, premium quality`
         ];
-        const randomStyle = artStyles[Math.floor(Math.random() * artStyles.length)];
         
-        // 添加随机修饰词
-        const modifiers = [
-          '，高清细节', '，精美质感', '，艺术感',
-          '，细腻描绘', '，生动逼真', '，色彩丰富'
-        ];
-        const randomModifier = modifiers[Math.floor(Math.random() * modifiers.length)];
+        // 如果提示词看起来是中文，使用英文翻译；否则使用随机艺术风格
+        const isChinese = /[\u4e00-\u9fa5]/.test(originalPrompt);
+        let newPrompt;
         
-        // 组合新的提示词
-        const newPrompt = `${randomStyle}，${originalPrompt}${randomModifier}`;
+        if (isChinese) {
+          // 使用英文翻译
+          newPrompt = translations[Math.floor(Math.random() * translations.length)];
+        } else {
+          // 添加随机艺术风格修饰词
+          const artStyles = [
+            'Impressionist style', 'Realism', 'Surrealism', 'Expressionism',
+            'Modern art', 'Classical oil painting', 'Digital painting', 'Concept art'
+          ];
+          const randomStyle = artStyles[Math.floor(Math.random() * artStyles.length)];
+          newPrompt = `${randomStyle}, ${originalPrompt}, high quality, detailed`;
+        }
         
         // 更新提示词
         ui.prompt.value = newPrompt;

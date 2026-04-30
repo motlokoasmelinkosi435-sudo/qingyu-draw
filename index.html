@@ -1020,8 +1020,7 @@
           const data = await res.json();
           if (data.code === 0 && data.data && typeof data.data.credits === 'number') {
             const credits = data.data.credits;
-            const remainingPoints = credits / 10;
-            msg(`剩余积分: ${remainingPoints}`);
+            msg(`剩余积分: ${credits}`);
           } else {
             msg('查询失败: ' + (data.msg || '未知错误'), true);
           }

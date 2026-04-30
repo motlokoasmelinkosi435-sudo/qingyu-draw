@@ -1560,7 +1560,18 @@
                   if (status === 'FAILED' || status === 'FAILURE' || status === 'failed') {
                     clearInterval(pollTimer);
                     addHistoryItem(taskId, 'failed', [], prompt);
-                    msg(`绘制失败: ${targetData.failure_reason || targetData.error || targetData.failReason || targetData.msg || pollData.msg || '未知错误'}`, true);
+                    let errorMsg = targetData.failure_reason || targetData.error || targetData.failReason || targetData.msg || pollData.msg || '未知错误';
+                    // 翻译常见错误信息
+                    if (errorMsg.includes('output_moderation')) {
+                      errorMsg = '内容审核未通过，请修改提示词或尝试其他主题';
+                    } else if (errorMsg.includes('input_moderation')) {
+                      errorMsg = '输入内容审核未通过，请修改提示词';
+                    } else if (errorMsg.includes('rate_limit')) {
+                      errorMsg = '请求过于频繁，请稍后再试';
+                    } else if (errorMsg.includes('invalid_api_key')) {
+                      errorMsg = 'API Key 无效，请检查您的 Key';
+                    }
+                    msg(`绘制失败: ${errorMsg}`, true);
                     setLoading(false);
                     return;
                   }

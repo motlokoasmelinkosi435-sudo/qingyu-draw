@@ -222,6 +222,68 @@
       color: var(--text-muted);
     }
 
+    /* 提示词版块样式 */
+    .prompt-section {
+      background: rgba(0, 0, 0, 0.2);
+      padding: 14px;
+      border-radius: 8px;
+    }
+
+    .prompt-section label {
+      margin-bottom: 10px;
+      font-size: 13px;
+      color: var(--text-muted);
+      display: block;
+    }
+
+    .prompt-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .prompt-tag {
+      background: rgba(212, 175, 55, 0.15);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      color: var(--accent);
+      padding: 6px 12px;
+      border-radius: 16px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .prompt-tag:hover {
+      background: rgba(212, 175, 55, 0.3);
+      transform: translateY(-1px);
+    }
+
+    .prompt-tag.active {
+      background: var(--accent);
+      color: #1a1a1a;
+      border-color: var(--accent);
+    }
+
+    .prompt-tip {
+      background: rgba(0, 0, 0, 0.3);
+      border-left: 3px solid var(--accent);
+      padding: 10px 12px;
+      border-radius: 0 6px 6px 0;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      display: none;
+    }
+
+    .prompt-tip.show {
+      display: block;
+    }
+
+    .prompt-tip strong {
+      color: var(--accent);
+    }
+
     /* 增大 */
 
     .thumbs {
@@ -829,6 +891,19 @@
         <textarea id="prompt" placeholder="输入图片描述，支持中英文"></textarea>
       </div>
 
+      <div class="prompt-section">
+        <label>快速模板</label>
+        <div class="prompt-tags" id="promptTags">
+          <span class="prompt-tag" data-prompt="手相分析，手掌纹路清晰，命理解读，掌纹细节，生命线智慧线感情线" data-tip="请上传清晰的手掌图片，光线充足，手掌自然张开。">手相</span>
+          <span class="prompt-tag" data-prompt="面部分析，五官特征，面相解读，面部特征详细描述" data-tip="请上传正面清晰人脸照片，光线均匀，表情自然。">面相</span>
+          <span class="prompt-tag" data-prompt="风景照片，壮丽山川，自然风光，高清摄影" data-tip="无需上传图片，直接点击生成美丽风景。">风景</span>
+          <span class="prompt-tag" data-prompt="人物肖像，专业摄影，高清人像，精美光影" data-tip="请上传人物照片，生成艺术风格肖像。">肖像</span>
+          <span class="prompt-tag" data-prompt="动漫风格，二次元插画，可爱角色，精美画风" data-tip="无需上传图片，直接生成动漫角色。">动漫</span>
+          <span class="prompt-tag" data-prompt="产品摄影，商业广告，高清质感，专业布光" data-tip="请上传产品图片，生成专业产品效果图。">产品</span>
+        </div>
+        <div class="prompt-tip" id="promptTip"></div>
+      </div>
+
       <div class="inline-row">
         <label>模型</label>
         <select id="modelSelect">
@@ -982,7 +1057,9 @@
         historyList: el('historyList'),
         historyPrev: el('historyPrev'),
         historyNext: el('historyNext'),
-        historyPageInfo: el('historyPageInfo')
+        historyPageInfo: el('historyPageInfo'),
+        promptTags: el('promptTags'),
+        promptTip: el('promptTip')
       };
 
       let refImages = []; // 参考图数据 (base64)
@@ -1028,6 +1105,34 @@
           msg('查询失败: ' + e.message, true);
         }
       };
+
+      // 提示词标签点击事件
+      ui.promptTags.addEventListener('click', (e) => {
+        const tag = e.target.closest('.prompt-tag');
+        if (!tag) return;
+
+        // 移除所有标签的 active 状态
+        document.querySelectorAll('.prompt-tag').forEach(t => t.classList.remove('active'));
+        
+        // 设置当前标签为 active
+        tag.classList.add('active');
+
+        // 获取提示词和操作说明
+        const promptText = tag.getAttribute('data-prompt');
+        const tipText = tag.getAttribute('data-tip');
+
+        // 填充到输入框
+        ui.prompt.value = promptText;
+
+        // 显示操作说明
+        if (tipText) {
+          ui.promptTip.textContent = tipText;
+          ui.promptTip.classList.add('show');
+        } else {
+          ui.promptTip.classList.remove('show');
+        }
+      });
+
       ui.ratio.onchange = () => localStorage.setItem(STORE_RATIO, ui.ratio.value);
       ui.size.onchange = () => localStorage.setItem(STORE_SIZE, ui.size.value);
       ui.model.onchange = () => {

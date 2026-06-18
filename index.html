@@ -996,8 +996,8 @@
       if (localStorage.getItem(STORE_RATIO)) ui.ratio.value = localStorage.getItem(STORE_RATIO);
       if (localStorage.getItem(STORE_MODEL)) ui.model.value = localStorage.getItem(STORE_MODEL);
 
-      // 分辨率初始化：优先缓存，无缓存则默认 4K
-      ui.size.value = localStorage.getItem(STORE_SIZE) || '4K';
+      // 分辨率初始化：优先缓存，无缓存则默认 2K（平衡速度和质量）
+      ui.size.value = localStorage.getItem(STORE_SIZE) || '2K';
 
       // 监听保存
       ui.saveKey.onclick = () => {
@@ -1507,7 +1507,7 @@
               // 启动轮询机制
               let pollCount = 0;
               const maxPolls = 150; // 最多轮询150次 (约5分钟)
-              const pollInterval = 2000; // 每2秒轮询一次
+              const pollInterval = 1500; // 每1.5秒轮询一次，更快获取结果
               
               const pollTimer = setInterval(async () => {
                 pollCount++;

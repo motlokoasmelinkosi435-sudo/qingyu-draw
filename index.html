@@ -850,6 +850,7 @@
           <option value="5:4">5:4</option>
           <option value="4:5">4:5</option>
           <option value="21:9">21:9</option>
+          <option value="9:21">9:21（手机壁纸）</option>
         </select>
       </div>
       <div class="inline-row">
@@ -1278,6 +1279,7 @@
           let imgSize = "1024x1024";
           if (ratio === '16:9' || ratio === '3:2' || ratio === '4:3') imgSize = '1536x1024';
           else if (ratio === '9:16' || ratio === '2:3' || ratio === '3:4') imgSize = '1024x1536';
+          else if (ratio === '9:21') imgSize = '1024x2520'; // 手机壁纸 9:21
           else if (ratio === '1:1') imgSize = '1024x1024';
           else imgSize = '1024x1024'; // fallback
 
@@ -1504,9 +1506,10 @@
             if (pollingId) {
               msg(`任务已提交 (ID: ${pollingId})，正在等待绘制完成...`, false);
               
-              // 启动轮询机制
+              // 启动轮询机制（4K需要更长时间）
               let pollCount = 0;
-              const maxPolls = 150; // 最多轮询150次 (约5分钟)
+              const is4K = ui.size.value === '4K';
+              const maxPolls = is4K ? 240 : 150; // 4K最多8分钟，其他5分钟
               const pollInterval = 1500; // 每1.5秒轮询一次，更快获取结果
               
               const pollTimer = setInterval(async () => {

@@ -1261,6 +1261,8 @@
 
       // ====== 核心：生成请求 (同步模式) ======
       ui.go.onclick = async () => {
+        if (ui.go.disabled) return; // 防止重复点击
+        
         const prompt = ui.prompt.value.trim();
         const key = ui.key.value.trim();
         const model = ui.model.value || 'gemini-3.1-flash-image-preview';
@@ -1506,11 +1508,10 @@
             if (pollingId) {
               msg(`任务已提交 (ID: ${pollingId})，正在等待绘制完成...`, false);
               
-              // 启动轮询机制（4K需要更长时间）
+              // 启动轮询机制（服务器繁忙时需要更长时间）
               let pollCount = 0;
-              const is4K = ui.size.value === '4K';
-              const maxPolls = is4K ? 240 : 150; // 4K最多8分钟，其他5分钟
-              const pollInterval = 1500; // 每1.5秒轮询一次，更快获取结果
+              const maxPolls = 300; // 最多轮询300次 (约7.5分钟)
+              const pollInterval = 1500; // 每1.5秒轮询一次
               
               const pollTimer = setInterval(async () => {
                 pollCount++;
@@ -1587,9 +1588,12 @@
                       addGalleryGroup([imgUrl], prompt);
                       setLoading(false);
                     } else {
-                      // 状态成功但找不到图片，打印出来方便调试
-                      msg(`任务已成功，但解析图片失败: ${JSON.stringify(targetData).substring(0, 150)}`, true);
+                      // 状态成功但找不到图片，停止轮询并报错
+                      clearInterval(pollTimer);
+                      addHistoryItem(taskId, 'failed', [], prompt);
+                      msg(`任务已完成，但未获取到图片，请重试`, true);
                       console.log("成功但无图片:", pollData);
+                      setLoading(false);
                     }
                   } else if (pollCount >= maxPolls) {
                     clearInterval(pollTimer);

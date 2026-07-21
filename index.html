@@ -816,13 +816,6 @@
 </head>
 
 <body>
-  <div id="loadingMask" style="position:fixed;inset:0;background:#5F2E2E;display:flex;align-items:center;justify-content:center;z-index:9999;">
-    <div style="text-align:center;">
-      <div style="width:40px;height:40px;border:3px solid rgba(212,175,55,0.3);border-top-color:#d4af37;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px;"></div>
-      <div style="color:#d4af37;font-size:14px;">正在加载...</div>
-    </div>
-  </div>
-
   <div class="app-container">
     <aside class="panel-control">
       <header>
@@ -937,7 +930,7 @@
 
   <script>
     (function() {
-      const CURRENT_VERSION = '20260721v3';
+      const CURRENT_VERSION = '20260721v4';
       const lastVersion = localStorage.getItem('qingyu_version');
       
       if (lastVersion !== CURRENT_VERSION) {
@@ -959,17 +952,6 @@
     });
     
     ; (() => {
-      function hideLoadingMask() {
-        const loadingMask = document.getElementById('loadingMask');
-        if (loadingMask) {
-          loadingMask.style.opacity = '0';
-          loadingMask.style.transition = 'opacity 0.3s ease';
-          setTimeout(() => {
-            loadingMask.style.display = 'none';
-          }, 300);
-        }
-      }
-
       function safeInit() {
         try {
           if (!document.body) {
@@ -979,7 +961,6 @@
           initApp();
         } catch (e) {
           console.error('初始化失败:', e);
-          hideLoadingMask();
           setTimeout(safeInit, 100);
         }
       }
@@ -1948,12 +1929,6 @@
         r.onerror = rej;
         r.readAsDataURL(file);
       });
-
-      window.addEventListener('DOMContentLoaded', () => {
-        setTimeout(hideLoadingMask, 500);
-      });
-
-      setTimeout(hideLoadingMask, 5000);
 
       safeInit();
       }

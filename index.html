@@ -1070,7 +1070,10 @@
             msg('查询失败: ' + (data.msg || '未知错误'), true);
           }
         } catch (e) {
-          msg('查询失败: ' + e.message, true);
+          msg('积分查询接口已更新，请访问 GrsAI 控制台查看', true);
+          setTimeout(() => {
+            window.open('https://grsai.ai/zh/dashboard/api-keys', '_blank');
+          }, 1000);
         }
       };
 

@@ -1403,8 +1403,9 @@
                   }
 
                   // 尝试解析进度和结果
-                  if (dataObj.status === 'IN_PROGRESS' || dataObj.progress) {
-                    msg(`正在绘制... 进度: ${dataObj.progress || '处理中'}`);
+                  if (dataObj.status === 'IN_PROGRESS' || dataObj.progress || (dataObj.data && dataObj.data.progress)) {
+                    const progress = dataObj.progress || (dataObj.data && dataObj.data.progress) || '处理中';
+                    msg(`正在绘制... 进度: ${progress}`);
                   }
                   
                   // 寻找图片URL (增强兼容性)
@@ -1419,6 +1420,9 @@
                     }
                   }
                   if (!imgUrl && typeof dataObj.result === 'string' && dataObj.result.startsWith('http')) imgUrl = dataObj.result;
+                  if (!imgUrl && dataObj.results && Array.isArray(dataObj.results)) {
+                    imgUrl = dataObj.results[0] && dataObj.results[0].url;
+                  }
                   
                   if (imgUrl) {
                     if (!urls.includes(imgUrl)) urls.push(imgUrl);
@@ -1476,6 +1480,12 @@
                   return null;
                 }).filter(u => u);
               }
+            } else if (data.results && Array.isArray(data.results)) {
+              data.results.forEach(item => {
+                if (item.url && !urls.includes(item.url)) {
+                  urls.push(item.url);
+                }
+              });
             } else if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
               const content = data.choices[0].message.content;
               const mdImageRegex = /!\[.*?\]\((https?:\/\/[^\s\)]+)\)/g;

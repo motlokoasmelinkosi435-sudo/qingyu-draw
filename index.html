@@ -1274,6 +1274,8 @@
         msg('正在生成，请耐心等待...');
 
         const taskId = Date.now().toString();
+        const startTime = Date.now();
+        const maxEstimatedSeconds = 300;
         addHistoryItem(taskId, 'pending', [], prompt);
 
         try {
@@ -1402,11 +1404,14 @@
 
                   // 尝试解析进度和结果
                   const progress = dataObj.progress || (dataObj.data && dataObj.data.progress);
-                  if (dataObj.status === 'IN_PROGRESS' || dataObj.status === 'pending' || dataObj.status === 'processing' || progress) {
+                  const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+                  const estimatedProgress = Math.min(Math.floor((elapsedSeconds / maxEstimatedSeconds) * 100), 99);
+                  
+                  if (dataObj.status === 'IN_PROGRESS' || dataObj.status === 'pending' || dataObj.status === 'processing' || progress || elapsedSeconds > 5) {
                     if (progress !== undefined && progress !== null && progress !== '') {
                       msg(`正在绘制... 进度: ${progress}%`);
                     } else {
-                      msg('正在绘制... 进度: 处理中');
+                      msg(`正在绘制... 进度: ${estimatedProgress}%`);
                     }
                   }
                   
@@ -1552,12 +1557,16 @@
                   const progress = targetData.progress || pollData.progress || (targetData.data && targetData.data.progress) || (pollData.data && pollData.data.progress);
                   const status = targetData.status || pollData.status;
                   
-                  // 计算估计进度（如果没有进度信息）
-                  const estimatedProgress = Math.min(Math.floor((pollCount / maxPolls) * 100), 99);
+                  // 计算估计进度（基于轮询次数和时间）
+                  const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+                  const pollBasedProgress = Math.min(Math.floor((pollCount / maxPolls) * 100), 99);
+                  const timeBasedProgress = Math.min(Math.floor((elapsedSeconds / maxEstimatedSeconds) * 100), 99);
+                  const estimatedProgress = Math.max(pollBasedProgress, timeBasedProgress);
                   
+                  // 始终显示百分比进度
                   if (progress !== undefined && progress !== null && progress !== '') {
                     msg(`正在绘制... 进度: ${progress}%`);
-                  } else if (status === 'IN_PROGRESS' || status === 'pending' || status === 'processing') {
+                  } else {
                     msg(`正在绘制... 进度: ${estimatedProgress}%`);
                   }
                   

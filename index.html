@@ -930,13 +930,15 @@
 
   <script>
     (function() {
-      const CURRENT_VERSION = '20260721v4';
+      const CURRENT_VERSION = '20260721v5';
       const lastVersion = localStorage.getItem('qingyu_version');
       
       if (lastVersion !== CURRENT_VERSION) {
         localStorage.setItem('qingyu_version', CURRENT_VERSION);
         if (location.href.indexOf('refresh=1') === -1) {
-          location.href = location.href + (location.href.indexOf('?') === -1 ? '?refresh=1' : '&refresh=1');
+          setTimeout(() => {
+            location.href = location.href + (location.href.indexOf('?') === -1 ? '?refresh=1' : '&refresh=1');
+          }, 100);
         }
       }
     })();
@@ -1045,13 +1047,16 @@
       ui.size.value = localStorage.getItem(STORE_SIZE) || '2K';
 
       // 监听保存
-      ui.saveKey.onclick = () => {
-        localStorage.setItem(STORE_KEY, ui.key.value.trim());
-        msg('Key 已保存');
-      };
+      if (ui.saveKey) {
+        ui.saveKey.onclick = () => {
+          localStorage.setItem(STORE_KEY, ui.key.value.trim());
+          msg('Key 已保存');
+        };
+      }
 
       // 查询剩余次数
-      ui.queryCredits.onclick = async () => {
+      if (ui.queryCredits) {
+        ui.queryCredits.onclick = async () => {
         const key = ui.key.value.trim();
         if (!key) return msg('请先填写 Key', true);
 
@@ -1070,16 +1075,17 @@
             msg('查询失败: ' + (data.msg || '未知错误'), true);
           }
         } catch (e) {
-          msg('积分查询接口已更新，请访问 GrsAI 控制台查看', true);
-          setTimeout(() => {
-            window.open('https://grsai.ai/zh/dashboard/api-keys', '_blank');
-          }, 1000);
-        }
-      };
+            msg('积分查询接口已更新，请访问 GrsAI 控制台查看', true);
+            setTimeout(() => {
+              window.open('https://grsai.ai/zh/dashboard/api-keys', '_blank');
+            }, 1000);
+          }
+        };
+      }
 
-      ui.ratio.onchange = () => localStorage.setItem(STORE_RATIO, ui.ratio.value);
-      ui.size.onchange = () => localStorage.setItem(STORE_SIZE, ui.size.value);
-      ui.model.onchange = () => {
+      if (ui.ratio) ui.ratio.onchange = () => localStorage.setItem(STORE_RATIO, ui.ratio.value);
+      if (ui.size) ui.size.onchange = () => localStorage.setItem(STORE_SIZE, ui.size.value);
+      if (ui.model) ui.model.onchange = () => {
         localStorage.setItem(STORE_MODEL, ui.model.value);
         updateSizeAvailability();
       };
@@ -1307,8 +1313,9 @@
       // ====== Helper Methods (Removed Poll) ======
 
       // ====== 核心：生成请求 (同步模式) ======
-      ui.go.onclick = async () => {
-        if (ui.go.disabled) return; // 防止重复点击
+      if (ui.go) {
+        ui.go.onclick = async () => {
+          if (ui.go.disabled) return;
         
         const prompt = ui.prompt.value.trim();
         const key = ui.key.value.trim();
@@ -1671,11 +1678,12 @@
           console.error('错误堆栈:', err.stack);
           addHistoryItem(taskId, 'failed', [], prompt);
           const fullMsg = err.message || '未知错误';
-          console.log('显示给用户的错误信息:', fullMsg);
-          msg('错误: ' + fullMsg, true);
-          setLoading(false);
-        }
-      };
+            console.log('显示给用户的错误信息:', fullMsg);
+            msg('错误: ' + fullMsg, true);
+            setLoading(false);
+          }
+        };
+      }
 
       // ====== 界面更新 ======
       function setLoading(ing) {

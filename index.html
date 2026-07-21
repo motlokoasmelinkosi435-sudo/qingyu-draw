@@ -1304,26 +1304,24 @@
               prompt: prompt,
               aspectRatio: ui.ratio.value === '1:1' ? '1:1' : (ui.ratio.value || 'auto'), 
               imageSize: ui.size.value || '1K',
-              webHook: "-1",
-              shutProgress: false
+              replyType: 'json'
             };
 
-            // 如果有参考图，需要放入 urls 数组 (支持 Base64 或 URL)
+            // 如果有参考图，需要放入 images 数组 (支持 Base64 或 URL)
             if (rawFiles.length > 0) {
               const base64Url = await new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = (e) => resolve(e.target.result);
                 reader.readAsDataURL(rawFiles[0]);
               });
-              payload.urls = [base64Url];
+              payload.images = [base64Url];
             }
           } else {
             payload = {
               model: model,
               prompt: prompt,
               aspectRatio: ui.ratio.value, // 1:1, 16:9, 3:2 etc.
-              size: ui.size.value, // 1K, 2K, 4K
-              webHook: "-1" // 强制接口立即返回任务id用于轮询
+              replyType: 'json'
             };
 
             if (rawFiles.length > 0) {
@@ -1332,7 +1330,7 @@
                 reader.onload = (e) => resolve(e.target.result);
                 reader.readAsDataURL(rawFiles[0]);
               });
-              payload.urls = [base64Url];
+              payload.images = [base64Url];
             }
           }
 

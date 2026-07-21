@@ -4,7 +4,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <link rel="icon" href="favicon.ico?v=2" type="image/x-icon">
   <title>轻语绘图</title>
   <style>
     :root {
@@ -933,6 +936,18 @@
   </div>
 
   <script>
+    (function() {
+      const CURRENT_VERSION = '20260721v3';
+      const lastVersion = localStorage.getItem('qingyu_version');
+      
+      if (lastVersion !== CURRENT_VERSION) {
+        localStorage.setItem('qingyu_version', CURRENT_VERSION);
+        if (location.href.indexOf('refresh=1') === -1) {
+          location.href = location.href + (location.href.indexOf('?') === -1 ? '?refresh=1' : '&refresh=1');
+        }
+      }
+    })();
+
     window.onerror = function(msg, url, lineNo, columnNo, error) {
       console.error('全局错误:', msg, 'at', url, lineNo, columnNo, error);
       return true;

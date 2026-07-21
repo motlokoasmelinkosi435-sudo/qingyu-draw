@@ -1,13 +1,10 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
 
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-  <link rel="icon" href="favicon.ico?v=2" type="image/x-icon">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
   <title>轻语绘图</title>
   <style>
     :root {
@@ -816,6 +813,7 @@
 </head>
 
 <body>
+
   <div class="app-container">
     <aside class="panel-control">
       <header>
@@ -929,54 +927,16 @@
   </div>
 
   <script>
-    (function() {
-      const CURRENT_VERSION = '20260721v5';
-      const lastVersion = localStorage.getItem('qingyu_version');
-      
-      if (lastVersion !== CURRENT_VERSION) {
-        localStorage.setItem('qingyu_version', CURRENT_VERSION);
-        if (location.href.indexOf('refresh=1') === -1) {
-          setTimeout(() => {
-            location.href = location.href + (location.href.indexOf('?') === -1 ? '?refresh=1' : '&refresh=1');
-          }, 100);
-        }
-      }
-    })();
-
-    window.onerror = function(msg, url, lineNo, columnNo, error) {
-      console.error('全局错误:', msg, 'at', url, lineNo, columnNo, error);
-      return true;
-    };
-    
-    window.addEventListener('unhandledrejection', function(event) {
-      console.error('未处理的Promise拒绝:', event.reason);
-      event.preventDefault();
-    });
-    
     ; (() => {
-      function safeInit() {
-        try {
-          if (!document.body) {
-            setTimeout(safeInit, 50);
-            return;
-          }
-          initApp();
-        } catch (e) {
-          console.error('初始化失败:', e);
-          setTimeout(safeInit, 100);
-        }
-      }
-      
-      function initApp() {
       // ====== 配置与常量 ======
 
       // 🔴 🔴 🔴 已配置为您的公开域名 🔴 🔴 🔴
       const PUBLIC_R2_DOMAIN = 'https://cdn.gordensun.com/bananaproimage';
 
-      // API 端点 (统一使用新的 v1/api/generate 接口)
-      const BASE_URL = 'https://grsai.dakka.com.cn';
-      const GENERATE_ENDPOINT = BASE_URL + '/v1/api/generate';
-      const RESULT_ENDPOINT = BASE_URL + '/v1/api/result';
+      // API 端点 (nano-banana 系列 与 gpt-image-2 使用不同接口)
+      const ENDPOINT = 'https://grsai.dakka.com.cn/v1/api/generate';
+      const GPT_IMAGE_ENDPOINT = 'https://grsai.dakka.com.cn/v1/api/generate';
+      const RESULT_ENDPOINT = 'https://grsai.dakka.com.cn/v1/api/result';
 
       // 独立缓存 Keys (grsai_pro)
       const STORE_KEY = 'grsai_pro:key';
@@ -994,13 +954,7 @@
       const historyPerPage = 10;
 
       // ====== DOM 元素 ======
-      const el = (id) => {
-        const elem = document.getElementById(id);
-        if (!elem) {
-          console.warn('DOM元素未找到:', id);
-        }
-        return elem;
-      };
+      const el = (id) => document.getElementById(id);
       const ui = {
         prompt: el('prompt'),
         model: el('modelSelect'),
@@ -1047,22 +1001,19 @@
       ui.size.value = localStorage.getItem(STORE_SIZE) || '2K';
 
       // 监听保存
-      if (ui.saveKey) {
-        ui.saveKey.onclick = () => {
-          localStorage.setItem(STORE_KEY, ui.key.value.trim());
-          msg('Key 已保存');
-        };
-      }
+      ui.saveKey.onclick = () => {
+        localStorage.setItem(STORE_KEY, ui.key.value.trim());
+        msg('Key 已保存');
+      };
 
       // 查询剩余次数
-      if (ui.queryCredits) {
-        ui.queryCredits.onclick = async () => {
+      ui.queryCredits.onclick = async () => {
         const key = ui.key.value.trim();
         if (!key) return msg('请先填写 Key', true);
 
         msg('正在查询剩余次数...');
         try {
-          const res = await fetch(BASE_URL + '/client/openapi/getAPIKeyCredits', {
+          const res = await fetch('https://grsai.dakka.com.cn/client/openapi/getAPIKeyCredits', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ apiKey: key })
@@ -1075,17 +1026,13 @@
             msg('查询失败: ' + (data.msg || '未知错误'), true);
           }
         } catch (e) {
-            msg('积分查询接口已更新，请访问 GrsAI 控制台查看', true);
-            setTimeout(() => {
-              window.open('https://grsai.ai/zh/dashboard/api-keys', '_blank');
-            }, 1000);
-          }
-        };
-      }
+          msg('查询失败: ' + e.message, true);
+        }
+      };
 
-      if (ui.ratio) ui.ratio.onchange = () => localStorage.setItem(STORE_RATIO, ui.ratio.value);
-      if (ui.size) ui.size.onchange = () => localStorage.setItem(STORE_SIZE, ui.size.value);
-      if (ui.model) ui.model.onchange = () => {
+      ui.ratio.onchange = () => localStorage.setItem(STORE_RATIO, ui.ratio.value);
+      ui.size.onchange = () => localStorage.setItem(STORE_SIZE, ui.size.value);
+      ui.model.onchange = () => {
         localStorage.setItem(STORE_MODEL, ui.model.value);
         updateSizeAvailability();
       };
@@ -1313,9 +1260,8 @@
       // ====== Helper Methods (Removed Poll) ======
 
       // ====== 核心：生成请求 (同步模式) ======
-      if (ui.go) {
-        ui.go.onclick = async () => {
-          if (ui.go.disabled) return;
+      ui.go.onclick = async () => {
+        if (ui.go.disabled) return; // 防止重复点击
         
         const prompt = ui.prompt.value.trim();
         const key = ui.key.value.trim();
@@ -1339,7 +1285,7 @@
           else if (ratio === '1:1') imgSize = '1024x1024';
           else imgSize = '1024x1024'; // fallback
 
-          const endpoint = GENERATE_ENDPOINT;
+          let endpoint = GPT_IMAGE_ENDPOINT;
           let payload = {};
           let options = {
             method: 'POST',
@@ -1350,27 +1296,34 @@
           };
 
           if (model === 'nano-banana-pro') {
+            endpoint = ENDPOINT;
+            
+            // 对 nano-banana-pro 拼接参数
             payload = {
               model: model,
               prompt: prompt,
-              aspectRatio: ui.ratio.value === '1:1' ? '1:1' : (ui.ratio.value || 'auto'),
-              replyType: 'json'
+              aspectRatio: ui.ratio.value === '1:1' ? '1:1' : (ui.ratio.value || 'auto'), 
+              imageSize: ui.size.value || '1K',
+              webHook: "-1",
+              shutProgress: false
             };
 
+            // 如果有参考图，需要放入 urls 数组 (支持 Base64 或 URL)
             if (rawFiles.length > 0) {
               const base64Url = await new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = (e) => resolve(e.target.result);
                 reader.readAsDataURL(rawFiles[0]);
               });
-              payload.images = [base64Url];
+              payload.urls = [base64Url];
             }
           } else {
             payload = {
-              model: 'gpt-image-2',
+              model: model,
               prompt: prompt,
-              aspectRatio: ui.ratio.value,
-              replyType: 'json'
+              aspectRatio: ui.ratio.value, // 1:1, 16:9, 3:2 etc.
+              size: ui.size.value, // 1K, 2K, 4K
+              webHook: "-1" // 强制接口立即返回任务id用于轮询
             };
 
             if (rawFiles.length > 0) {
@@ -1379,17 +1332,13 @@
                 reader.onload = (e) => resolve(e.target.result);
                 reader.readAsDataURL(rawFiles[0]);
               });
-              payload.images = [base64Url];
+              payload.urls = [base64Url];
             }
           }
 
           options.body = JSON.stringify(payload);
 
-          console.log('正在请求 API:', { endpoint, model, promptLength: prompt.length, ratio: ui.ratio.value, size: ui.size.value });
           const res = await fetch(endpoint, options);
-          console.log('API 响应状态:', res.status);
-          console.log('API 响应 headers:', Object.fromEntries(res.headers.entries()));
-          
           if (!res.ok) {
             let errMessage = `HTTP ${res.status}`;
             try {
@@ -1397,11 +1346,9 @@
               console.error("API 响应错误详情:", errData);
               if (errData.error && errData.error.message) errMessage = errData.error.message;
               else if (errData.message) errMessage = errData.message;
-              else if (errData.msg) errMessage = errData.msg;
-              else errMessage = JSON.stringify(errData);
-            } catch (e) { 
-              console.error('解析错误响应失败:', e);
-            }
+              else if (errData.msg) errMessage = errData.msg; // 添加对 msg 字段的兼容
+              else errMessage = JSON.stringify(errData); // 如果没有标准错误字段，则输出完整错误信息
+            } catch (e) { }
             
             if (errMessage.includes('experiencing high demand') || res.status === 429) {
                errMessage = `系统当前高负载（API请求过快或并发过高），请稍后重试。\n详细: ${errMessage}`;
@@ -1514,23 +1461,9 @@
             // 处理同步 JSON 响应
             const data = await res.json();
             rawResponseDebug.push(data);
-            console.log('API 返回数据:', data);
             
-            // 检查是否有错误
-            if (data.error) {
-              throw new Error(data.error);
-            }
-            
-            // 新API格式：从 results 数组中提取图片
-            if (data.results && Array.isArray(data.results)) {
-              data.results.forEach(item => {
-                if (item.url && !urls.includes(item.url)) {
-                  urls.push(item.url);
-                }
-              });
-            }
-            // 兼容旧格式
-            else if (data.imageUrl) urls.push(data.imageUrl);
+            // 尝试从多种常见结构中提取图片
+            if (data.imageUrl) urls.push(data.imageUrl);
             else if (data.url) urls.push(data.url);
             else if (data.result && typeof data.result === 'string' && data.result.startsWith('http')) urls.push(data.result);
             else if (data.data) {
@@ -1542,6 +1475,23 @@
                   if (item.b64_json) return `data:image/png;base64,${item.b64_json}`;
                   return null;
                 }).filter(u => u);
+              }
+            } else if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
+              const content = data.choices[0].message.content;
+              const mdImageRegex = /!\[.*?\]\((https?:\/\/[^\s\)]+)\)/g;
+              let match;
+              let foundUrl = false;
+              while ((match = mdImageRegex.exec(content)) !== null) {
+                urls.push(match[1]);
+                foundUrl = true;
+              }
+              if (!foundUrl) {
+                // 如果没有匹配到 markdown 图片，尝试直接提取纯 URL
+                const urlRegex = /(https?:\/\/[^\s\)]+)/g;
+                while ((match = urlRegex.exec(content)) !== null) {
+                  urls.push(match[1]);
+                  foundUrl = true;
+                }
               }
             }
           }
@@ -1625,7 +1575,6 @@
                     } else if (errorMsg.includes('invalid_api_key')) {
                       errorMsg = 'API Key 无效，请检查您的 Key';
                     }
-                    console.error('轮询失败详情:', { pollData, targetData, status, errorMsg });
                     msg(`绘制失败: ${errorMsg}`, true);
                     setLoading(false);
                     return;
@@ -1674,16 +1623,12 @@
           // 如果没有被轮询拦截，则直接在这里关闭loading
           setLoading(false);
         } catch (err) {
-          console.error('生成请求失败:', err);
-          console.error('错误堆栈:', err.stack);
+          console.error(err);
           addHistoryItem(taskId, 'failed', [], prompt);
-          const fullMsg = err.message || '未知错误';
-            console.log('显示给用户的错误信息:', fullMsg);
-            msg('错误: ' + fullMsg, true);
-            setLoading(false);
-          }
-        };
-      }
+          msg('错误: ' + (err.message || '未知错误'), true);
+          setLoading(false);
+        }
+      };
 
       // ====== 界面更新 ======
       function setLoading(ing) {
@@ -1941,8 +1886,6 @@
         r.readAsDataURL(file);
       });
 
-      safeInit();
-      }
     })();
   </script>
 </body>
